@@ -1,165 +1,57 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.core.window import Window
-from datetime import datetime, timedelta
+name: Build Android APK
 
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
-Window.clearcolor = (0.96, 0.97, 0.99, 1)
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-class IVCalculator(BoxLayout):
-    """Tính dịch truyền - Dr. Nểm CCĐK"""
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    DROPS_PER_ML = 20
-    MAX_SAFE_RATE = 150
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt install -y -qq \
+            openjdk-17-jdk-headless \
+            libffi-dev libssl-dev autoconf libtool \
+            unzip wget zip
 
-    def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', padding=18, spacing=12, **kwargs)
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install "cython<3.0"
+          pip install kivy
+          pip install buildozer
 
-        self.add_widget(Label(
-            text='[b]TÍNH DỊCH TRUYỀN[/b]\n'
-                 '[size=14][color=1976D2]Code by Dr. Nểm CCĐK[/color][/size]',
-            markup=True, font_size=24,
-            size_hint_y=None, height=80,
-            halign='center',
-        ))
+      - name: Accept Android SDK licenses
+        run: |
+          export P4A_ACCEPT_SDK_LICENSE=1
+          echo "P4A_ACCEPT_SDK_LICENSE=$P4A_ACCEPT_SDK_LICENSE"
 
-        self.add_widget(self._row_label('Thể tích (mL):'))
-        self.volume_input = self._row_input(hint='VD: 500')
-        self.add_widget(self.volume_input)
+      - name: Build APK
+        run: |
+          set -o pipefail
+          export P4A_ACCEPT_SDK_LICENSE=1
+          buildozer android debug 2>&1 | tee build.log
 
-        self.mode = 1
-        mode_box = BoxLayout(orientation='horizontal',
-                              size_hint_y=None, height=50, spacing=10)
-        self.btn_mode1 = self._mode_button('Biết giọt/phút', active=True)
-        self.btn_mode2 = self._mode_button('Biết thời gian', active=False)
-        self.btn_mode1.bind(on_press=lambda *_: self.set_mode(1))
-        self.btn_mode2.bind(on_press=lambda *_: self.set_mode(2))
-        mode_box.add_widget(self.btn_mode1)
-        mode_box.add_widget(self.btn_mode2)
-        self.add_widget(mode_box)
-
-        self.input2_label = self._row_label('Số giọt/phút:')
-        self.add_widget(self.input2_label)
-        self.input2 = self._row_input(hint='VD: 60')
-        self.add_widget(self.input2)
-
-        calc_btn = Button(
-            text='🧮 TÍNH NGAY',
-            font_size=20, bold=True,
-            size_hint_y=None, height=60,
-            background_color=(0.20, 0.78, 0.35, 1),
-            color=(1, 1, 1, 1),
-        )
-        calc_btn.bind(on_press=self.calculate)
-        self.add_widget(calc_btn)
-
-        self.result_label = Label(
-            text='[color=888888]— Nhập số rồi bấm TÍNH NGAY —[/color]',
-            markup=True, font_size=16,
-            text_size=(Window.width - 50, None),
-            halign='center', valign='top',
-            size_hint_y=None, height=200,
-        )
-        self.add_widget(self.result_label)
-
-        self.add_widget(Label(
-            text=f'[size=12][color=888888]Tiêu chuẩn: {self.DROPS_PER_ML} g/mL • '
-                 f'Cảnh báo: >{self.MAX_SAFE_RATE} g/p[/color][/size]',
-            markup=True, size_hint_y=None, height=30,
-        ))
-
-    def _row_label(self, text):
-        return Label(
-            text=text, font_size=16,
-            size_hint_y=None, height=30,
-            halign='left', valign='middle',
-            text_size=(Window.width - 40, None),
-        )
-
-    def _row_input(self, hint=''):
-        return TextInput(
-            multiline=False, input_filter='float',
-            font_size=20,
-            size_hint_y=None, height=48,
-            hint_text=hint,
-            padding=(10, 10, 10, 10),
-        )
-
-    def _mode_button(self, text, active):
-        return Button(
-            text=text, font_size=14, bold=True,
-            background_color=(
-                (0.13, 0.45, 0.95, 1) if active else (0.70, 0.70, 0.74, 1)
-            ),
-            color=(1, 1, 1, 1),
-        )
-
-    def set_mode(self, mode):
-        if mode == self.mode:
-            return
-        self.mode = mode
-        self.btn_mode1.background_color = (0.13, 0.45, 0.95, 1) if mode == 1 else (0.70, 0.70, 0.74, 1)
-        self.btn_mode2.background_color = (0.13, 0.45, 0.95, 1) if mode == 2 else (0.70, 0.70, 0.74, 1)
-        self.input2_label.text = 'Số giọt/phút:' if mode == 1 else 'Thời gian (giờ):'
-        self.result_label.text = '[color=888888]— Đã đổi chế độ —[/color]'
-
-    def calculate(self, *_):
-        try:
-            v = float(self.volume_input.text)
-            x = float(self.input2.text)
-        except ValueError:
-            self.result_label.text = '[color=D32F2F][b]⚠️ Nhập số hợp lệ đã anh[/b][/color]'
-            return
-        if v <= 0 or x <= 0:
-            self.result_label.text = '[color=D32F2F][b]⚠️ Số phải lớn hơn 0[/b][/color]'
-            return
-
-        now = datetime.now()
-        if self.mode == 1:
-            gpm = x
-            minutes = (v * self.DROPS_PER_ML) / gpm
-            if minutes < 1:
-                self.result_label.text = '[color=D32F2F][b]⚠️ Giọt/phút quá lớn — không truyền được[/b][/color]'
-                return
-            hours = minutes / 60
-            end_time = now + timedelta(minutes=minutes)
-            ap = 'SA' if end_time.strftime('%p') == 'AM' else 'CH'
-            time_str = end_time.strftime(f'%H:%M {ap}')
-
-            warn = ''
-            if gpm > self.MAX_SAFE_RATE:
-                warn = f'\n\n[color=D32F2F][b]⚠️ CẢNH BÁO: {gpm:.0f} g/p > 150 — chậm lại![/b][/color]'
-
-            self.result_label.text = (
-                f'[b]THỜI GIAN TRUYỀN:[/b]\n'
-                f'[size=26][color=1976D2]{hours:.1f} giờ ({minutes:.0f} phút)[/color][/size]\n\n'
-                f'⏰ Bắt đầu: [b]{now.strftime("%H:%M")}[/b]\n'
-                f'🏁 Kết thúc: [b][color=43A047]{time_str}[/color][/b]'
-                f'{warn}'
-            )
-        else:
-            hours = x
-            minutes = hours * 60
-            gpm = (v * self.DROPS_PER_ML) / minutes
-            warn = ''
-            if gpm > self.MAX_SAFE_RATE:
-                warn = f'\n\n[color=D32F2F][b]⚠️ CẢNH BÁO: {gpm:.0f} g/p > 150 — quá nhanh![/b][/color]'
-            self.result_label.text = (
-                f'[b]TỐC ĐỘ TRUYỀN:[/b]\n\n'
-                f'[size=32][color=1976D2]{gpm:.0f} giọt/phút[/color][/size]'
-                f'{warn}'
-            )
-
-
-class IVCalculatorApp(App):
-    def build(self):
-        self.title = 'Tính Dịch Truyền - Dr. Nểm CCĐK'
-        return IVCalculator()
-
-
-if __name__ == '__main__':
-    IVCalculatorApp().run()
+      - name: Upload APK and log
+        uses: actions/upload-artifact@v4
+        with:
+          name: tindichtruyen-apk
+          path: |
+            bin/*.apk
+            build.log
+          if-no-files-found: error
