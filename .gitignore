@@ -1,0 +1,21 @@
+# Build outputs
+build/
+dist/
+bin/
+*.spec.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual env
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# APK
+*.apk

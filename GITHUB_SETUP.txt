@@ -1,0 +1,41 @@
+# GitHub Upload Guide - Tính Dịch Truyền
+# ==============================================
+# Làm theo các bước sau trên Windows PowerShell
+# ==============================================
+
+# Buoc 1: Cai Git (neu chua co)
+# Tai ve: https://git-scm.com/download/win
+# Hoac chay lenh sau trong PowerShell (Admin):
+# winget install --id Git.Git -e --source winget
+
+# Sau khi cai Git, mo PowerShell moi (de load PATH moi)
+
+# ==============================================
+# Buoc 2: Tao repo tren GitHub
+# ==============================================
+# Vao https://github.com/new
+# Ten repo: tinh-dich-truyen
+# Chon Public hoac Private
+# KHONG tick "Initialize with README"
+# Nhan "Create repository"
+# Copy URL repo, vi du: https://github.com/username/tinh-dich-truyen.git
+
+# ==============================================
+# Buoc 3: Chay cac lenh sau (thay URL cua ban)
+# ==============================================
+
+# cd C:\Users\MyPC\.mavis\sessions\mvs_743f10055b3a47f8bb9c47a9b011efbe\workspace
+
+# git init
+# git add .
+# git commit -m "Initial commit - Tính Dịch Truyền Code by Dr. Nểm CCĐK"
+# git branch -M main
+# git remote add origin https://github.com/USERNAME/tinh-dich-truyen.git
+# git push -u origin main
+
+# ==============================================
+# Hoac dung GitHub CLI (de hon):
+# ==============================================
+# Tai GitHub CLI: https://cli.github.com/
+# Sau do chay:
+# gh repo create tinh-dich-truyen --public --source=. --remote=origin --push

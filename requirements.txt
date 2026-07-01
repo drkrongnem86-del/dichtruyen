@@ -1,0 +1,8 @@
+# Requirements
+# Desktop (Tkinter)
+pyinstaller>=6.0.0
+
+# Android (Kivy)
+kivy==2.3.0
+buildozer>=1.5.0
+cython==0.29.36
